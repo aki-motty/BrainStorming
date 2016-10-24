@@ -13,6 +13,7 @@ Projects = {}
 projectName = ""
 mode = 1
 console_length = 80
+proj_tab = {}
 
 # 初期化処理
 if not os.path.exists("Projects.txt"):          
@@ -29,15 +30,14 @@ class MainFrame(wx.Frame):
 
     def __init__(self):
         wx.Frame.__init__(self, None, wx.ID_ANY,"BrainStorming",size=(800,600))
+        
         self._mgr = aui.AuiManager()
         self._mgr.SetManagedWindow(self)
 
-        notebook = aui.AuiNotebook(self, wx.ID_ANY,agwStyle=aui.AUI_NB_CLOSE_ON_ALL_TABS)
-        panelTwo = ProjectsTab(notebook)
+        self.notebook = aui.AuiNotebook(self, wx.ID_ANY,agwStyle=aui.AUI_NB_CLOSE_ON_ALL_TABS)
+        
 
-        notebook.AddPage(panelTwo, "PanelTwo", False)
-
-        self._mgr.AddPane(notebook, aui.AuiPaneInfo().Name("notebook_content").CenterPane().PaneBorder(False))
+        self._mgr.AddPane(self.notebook, aui.AuiPaneInfo().Name("notebook_content").CenterPane().PaneBorder(False))
         self._mgr.Update()
         self.SetMenuBar(MainMenu())
 
@@ -46,16 +46,21 @@ class MainFrame(wx.Frame):
                 create_project_frame = CreateProjectFrame()
                 create_project_frame.Show()
             if event.GetId() == 1002:
-                open_project = OpenProjectFrame()
+                open_project = OpenProjectFrame(parent=self)
                 open_project.Show()
             if event.GetId() == 1004:
                 self.Close(True)
-        self.Bind(wx.EVT_MENU,selectMenu)
 
+        
+        self.Bind(wx.EVT_MENU,selectMenu)
+    def addTab(self,string):
+        proj_tab[string] = ProjectsTab(self.notebook)
+        self.notebook.AddPage(proj_tab[string], string, False)
+        self._mgr.Update()
 class OpenProjectFrame(wx.Frame):
 
-    def __init__(self):
-        wx.Frame.__init__(self, None, wx.ID_ANY,"aaaaaaa",size=(300,100))
+    def __init__(self,parent):
+        wx.Frame.__init__(self, parent, wx.ID_ANY,"aaaaaaa",size=(300,100))
         with open('Projects.txt', 'rb') as f:
             Projects = pickle.load((f))
         combobox_1 = wx.ComboBox(self, wx.ID_ANY, "SelectProject", choices=list(Projects.keys()),style=wx.CB_READONLY)
@@ -63,11 +68,15 @@ class OpenProjectFrame(wx.Frame):
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(combobox_1, flag= wx.GROW)
         layout.Add(open_project_button, flag=wx.SHAPED | wx.ALIGN_RIGHT | wx.ALL, border=5)
-
+        
         self.SetSizer(layout)
+        
+
         def click_button(event):
             if event.GetId() == 2001:
-                self.Close(True)
+                if len(combobox_1.GetValue()) > 0:
+                    parent.addTab(combobox_1.GetValue())
+                    self.Close(True)
         self.Bind(wx.EVT_BUTTON, click_button, open_project_button)
 
 class CreateProjectFrame(wx.Frame):
@@ -77,6 +86,8 @@ class CreateProjectFrame(wx.Frame):
     
     def __init__(self):
         wx.Frame.__init__(self, None, wx.ID_ANY,"ProjectName",size=(300,100))
+        with open('Projects.txt', 'rb') as f:
+            Projects = pickle.load((f))
         #create_project_panel = wx.Panel(self, wx.ID_ANY)
         create_project_text = wx.TextCtrl(self, wx.ID_ANY)
         create_project_text.SetMaxLength(20)
@@ -87,14 +98,18 @@ class CreateProjectFrame(wx.Frame):
         layout.Add(create_project_button, flag=wx.SHAPED | wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.SetSizer(layout)
         def add_proj(project):
+
             Projects[project] = {}
             with open('Projects.txt', 'wb') as f:
                 pickle.dump(Projects, f)
+            """with open('Projects.txt', 'rb') as f:
+                Projects = pickle.load((f))"""
          
         def click_button(event):
             if event.GetId() == 2001:
-                add_proj(create_project_text.GetValue())
-                self.Close(True)
+                if len(create_project_text.GetValue()) > 0:
+                    add_proj(create_project_text.GetValue())
+                    self.Close(True)
         self.Bind(wx.EVT_BUTTON, click_button, create_project_button)
 
 class ProjectsTab(wx.Panel):
@@ -123,7 +138,7 @@ app.MainLoop()
 
 # プロジェクトやアイデアの中身を表示する
 def display(dictionary):
-    print("-"*console_length)
+    print("-" * console_length)
     if mode == 1:
         print("Projects")
     elif mode == 2:
@@ -134,8 +149,8 @@ def display(dictionary):
     Project_OR_Idea_keys = list(dictionary.keys())
     Project_OR_Idea_keys.sort()
     for key in Project_OR_Idea_keys:
-        print ("・"+key)
-    print("-"*console_length)
+        print("・" + key)
+    print("-" * console_length)
 
 # プロジェクトを作成
 def add_proj(project):
@@ -160,7 +175,7 @@ def project(projname):
         global projectName
         projectName = projname
     else:
-        print ("naiyo")
+        print("naiyo")
 
 # アイデアを追加
 def add_idea(project,title,idea):  
@@ -185,7 +200,7 @@ def idea(project,title):
     if title in Projects[project]:
         print(Projects[project][title])
     else:
-        print(title  + "が見つかりませんでした.")
+        print(title + "が見つかりませんでした.")
 
 # アイデアを文字の一致で検索
 def find(project,word):
@@ -200,7 +215,7 @@ def back():
     projectName = ""
 # 様々なコマンドをまとめている
 def commands(command):
-    print("-"*console_length)
+    print("-" * console_length)
     if command == "quit":
         sys.exit()
     
