@@ -9,8 +9,10 @@ import sys
 import os
 import wx
 import wx.lib.agw.aui as aui
+import inspect
+
 Projects = {}
-projectName = ""
+projectName = ""   
 mode = 1
 console_length = 80
 proj_tab = {}
@@ -49,18 +51,32 @@ class MainFrame(wx.Frame):
                 open_project = OpenProjectFrame(parent=self)
                 open_project.Show()
             if event.GetId() == 1004:
-                self.Close(True)
+                ExitHandler(self)
+            if event.GetId() == 1005:
+                add_idea = AddIdeaFrame(parent=self)
+                add_idea.Show()
 
         
         self.Bind(wx.EVT_MENU,selectMenu)
+        def ExitHandler(self):
+            dlg = wx.MessageDialog(parent = self, message = u"終了します。よろしいですか？", caption = u"終了確認", style = wx.YES_NO)
+            result = dlg.ShowModal()
+            print(result)
+            print(wx.ID_OK)
+            if result == 5103:
+                wx.Exit()
+            return
     def addTab(self,string):
         proj_tab[string] = ProjectsTab(self.notebook)
         self.notebook.AddPage(proj_tab[string], string, False)
         self._mgr.Update()
+    def addIdea(self, string):
+        print()
+
 class OpenProjectFrame(wx.Frame):
 
     def __init__(self,parent):
-        wx.Frame.__init__(self, parent, wx.ID_ANY,"aaaaaaa",size=(300,100))
+        wx.Frame.__init__(self, parent, wx.ID_ANY,"OpenProject",size=(300,100))
         with open('Projects.txt', 'rb') as f:
             Projects = pickle.load((f))
         combobox_1 = wx.ComboBox(self, wx.ID_ANY, "SelectProject", choices=list(Projects.keys()),style=wx.CB_READONLY)
@@ -70,8 +86,6 @@ class OpenProjectFrame(wx.Frame):
         layout.Add(open_project_button, flag=wx.SHAPED | wx.ALIGN_RIGHT | wx.ALL, border=5)
         
         self.SetSizer(layout)
-        
-
         def click_button(event):
             if event.GetId() == 2001:
                 if len(combobox_1.GetValue()) > 0:
@@ -83,34 +97,72 @@ class CreateProjectFrame(wx.Frame):
     """
     CreateProjectFrame class
     """
-    
     def __init__(self):
         wx.Frame.__init__(self, None, wx.ID_ANY,"ProjectName",size=(300,100))
         with open('Projects.txt', 'rb') as f:
             Projects = pickle.load((f))
         #create_project_panel = wx.Panel(self, wx.ID_ANY)
         create_project_text = wx.TextCtrl(self, wx.ID_ANY)
-        create_project_text.SetMaxLength(20)
         create_project_button = wx.Button(self, 2001,"作成")
-
+        
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(create_project_text, flag=wx.EXPAND | wx.ALL, border = 5)
         layout.Add(create_project_button, flag=wx.SHAPED | wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.SetSizer(layout)
         def add_proj(project):
-
             Projects[project] = {}
             with open('Projects.txt', 'wb') as f:
                 pickle.dump(Projects, f)
-            """with open('Projects.txt', 'rb') as f:
-                Projects = pickle.load((f))"""
          
         def click_button(event):
             if event.GetId() == 2001:
                 if len(create_project_text.GetValue()) > 0:
                     add_proj(create_project_text.GetValue())
                     self.Close(True)
+        def maxLen(event):
+            
+            text = str(create_project_text.GetValue())
+            utf_char_num = str(bytes(text, "UTF-8")).count("\\") / 3 
+            if len(bytes(text,"UTF-8")) - int(utf_char_num -1 ) > 40:
+                create_project_text.Remove(create_project_text.GetInsertionPoint()-1,create_project_text.GetInsertionPoint())
         self.Bind(wx.EVT_BUTTON, click_button, create_project_button)
+        self.Bind(wx.EVT_TEXT, maxLen, create_project_text)
+class AddIdeaFrame(wx.Frame):
+    def __init__(self,parent):
+        wx.Frame.__init__(self, parent, wx.ID_ANY, "AddIdea", size = (300,300))
+        panel = wx.Panel(self, -1)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        s_text_1 = wx.StaticText(panel, -1, "タイトル")
+        hbox1.Add(s_text_1, 0, wx.RIGHT,8)
+        title = wx.TextCtrl(panel, -1)
+        title.SetMaxLength(20)
+        hbox1.Add(title, 1)
+        vbox.Add(hbox1, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+
+        vbox.Add((-1, 10))
+
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        s_text_2 = wx.StaticText(panel, -1, "アイデア")
+        hbox2.Add(s_text_2, 0)
+        vbox.Add(hbox2, 0, wx.LEFT | wx.TOP, 10)
+
+        vbox.Add((-1, 10))
+
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)
+        idea = wx.TextCtrl(panel, -1, style=wx.TE_MULTILINE | wx.TE_RICH)
+        hbox3.Add(idea, 1, wx.EXPAND)
+        vbox.Add(hbox3, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
+
+        vbox.Add((-1, 25))
+        hbox4 = wx.BoxSizer(wx.HORIZONTAL)
+        button = wx.Button(panel, 2001, "追加")
+        hbox4.Add(button, 0, wx.LEFT | wx.BOTTOM, 5)
+        vbox.Add(hbox4, 0, wx.ALIGN_RIGHT | wx.RIGHT, 10) 
+
+        panel.SetSizer(vbox)
 
 class ProjectsTab(wx.Panel):
     def __init__(self, parent):
@@ -127,8 +179,11 @@ class MainMenu(wx.MenuBar):
         open_project = menu_file.Append(1002, "プロジェクトを開く")
         save_project = menu_file.Append(1003,"保存")
         exit_bs = menu_file.Append(1004, "終了")
-
         self.Append(menu_file, "ファイル")
+
+        menu_project = wx.Menu()
+        add_idea = menu_project.Append(1005, "アイデアを追加")
+        self.Append(menu_project, "プロジェクト")
             
 app = wx.App()
 mainFrame = MainFrame()
